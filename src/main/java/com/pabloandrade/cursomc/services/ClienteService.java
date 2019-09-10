@@ -46,12 +46,14 @@ public class ClienteService {
 		return obj;
 	}
 
+	@Transactional
 	public Cliente update(Cliente obj) {
 		Cliente newObj = find(obj.getId());
 		updateData(newObj, obj);
 		return repo.save(newObj);
 	}
 
+	@Transactional
 	public void delete(Integer id) {
 		find(id);
 		try {
