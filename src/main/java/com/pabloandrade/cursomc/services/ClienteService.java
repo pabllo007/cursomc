@@ -1,24 +1,32 @@
 package com.pabloandrade.cursomc.services;
 
+import java.awt.image.BufferedImage;
+import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort.Direction;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.pabloandrade.cursomc.domain.Cidade;
 import com.pabloandrade.cursomc.domain.Cliente;
 import com.pabloandrade.cursomc.domain.Endereco;
+import com.pabloandrade.cursomc.domain.enums.Perfil;
 import com.pabloandrade.cursomc.domain.enums.TipoCliente;
 import com.pabloandrade.cursomc.dto.ClienteDTO;
 import com.pabloandrade.cursomc.dto.ClienteNewDTO;
 import com.pabloandrade.cursomc.repositories.ClienteRepository;
 import com.pabloandrade.cursomc.repositories.EnderecoRepository;
+import com.pabloandrade.cursomc.security.UserSS;
+import com.pabloandrade.cursomc.services.exceptions.AuthorizationException;
 import com.pabloandrade.cursomc.services.exceptions.DataIntegrityException;
 import com.pabloandrade.cursomc.services.exceptions.ObjectNotFoundException;
 
@@ -31,7 +39,28 @@ public class ClienteService {
 	@Autowired
 	private EnderecoRepository enderecoRepository;
 
+	@Autowired
+	private BCryptPasswordEncoder pe;
+
+	@Autowired
+	private S3Service s3Service;
+
+	@Autowired
+	private ImageService imageService;
+
+	@Value("${img.prefix.cliente.profile}")
+	private String prefix;
+	
+	@Value("${img.profile.size}")
+	private Integer size;
+
 	public Cliente find(Integer id) {
+
+		UserSS user = UserService.authenticated();
+
+		if (user == null || !user.hasRole(Perfil.ADMIN) && !id.equals(user.getId())) {
+			throw new AuthorizationException("Acesso negado!");
+		}
 
 		Optional<Cliente> obj = repo.findById(id);
 		return obj.orElseThrow(() -> new ObjectNotFoundException(
@@ -75,12 +104,12 @@ public class ClienteService {
 	}
 
 	public Cliente fromDTO(ClienteDTO dto) {
-		return new Cliente(dto.getId(), dto.getNome(), dto.getEmail(), null, null);
+		return new Cliente(dto.getId(), dto.getNome(), dto.getEmail(), null, null, null);
 	}
 
 	public Cliente fromDTO(ClienteNewDTO dto) {
 		Cliente cli = new Cliente(null, dto.getNome(), dto.getEmail(), dto.getCpfOuCnpj(),
-				TipoCliente.obterPorId(dto.getTipo()));
+				TipoCliente.obterPorId(dto.getTipo()), pe.encode(dto.getSenha()));
 		Cidade cid = new Cidade(dto.getCidadeId(), null, null);
 		Endereco end = new Endereco(null, dto.getLogradouro(), dto.getNumero(), dto.getComplemento(), dto.getBairro(),
 				dto.getCep(), cli, cid);
@@ -100,5 +129,22 @@ public class ClienteService {
 	private void updateData(Cliente newObj, Cliente obj) {
 		newObj.setNome(obj.getNome());
 		newObj.setEmail(obj.getEmail());
+	}
+
+	public URI uploadProfilePicture(MultipartFile multipartFile) {
+		UserSS user = UserService.authenticated();
+
+		if (user == null) {
+			throw new AuthorizationException("Acesso negado!");
+		}
+
+		BufferedImage jpgImagem = imageService.getJpgImageFromFile(multipartFile);
+		jpgImagem = imageService.cropSquare(jpgImagem);
+		jpgImagem = imageService.resize(jpgImagem, size);
+		
+		
+		String fileName = prefix + user.getId() + ".jpg";
+
+		return s3Service.uploadFile(imageService.InputStream(jpgImagem, "jpg"), fileName, "image");
 	}
 }
