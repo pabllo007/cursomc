@@ -18,6 +18,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import com.pabloandrade.cursomc.security.JWTAuthenticationFilter;
 import com.pabloandrade.cursomc.security.JWTAuthorizationFilter;
@@ -73,7 +75,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 	@Bean
 	CorsConfigurationSource corsConfiguration() {
 		CorsConfiguration configuration = new CorsConfiguration().applyPermitDefaultValues();
-		configuration.setAllowedMethods(Arrays.asList("POST","PUT", "DELETE", "GET", "OPTIONS"));
+		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "TRACE", "CONNECT"));
 		final UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", configuration);
 		return source;
@@ -83,4 +85,20 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 	public BCryptPasswordEncoder bCryptPasswordEncoder() {
 		return new BCryptPasswordEncoder();
 	}
+	
+	@Bean
+	public WebMvcConfigurer corsConfigurer() {
+	    return new WebMvcConfigurer() {
+	        @Override
+	        public void addCorsMappings(CorsRegistry registry) {
+	            registry.addMapping("/**")
+	                    .allowedOrigins("*")
+	                    .allowedMethods("GET", "PUT", "POST", "PATCH", "DELETE", "OPTIONS");
+	        }
+	    };
+	}
+	
 }
+
+
+
