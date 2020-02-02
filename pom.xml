@@ -11,7 +11,7 @@
 	</parent>
 	<groupId>com.pabloandrade.cursomc</groupId>
 	<artifactId>cursomc_pablo</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0.0-SNAPSHOT</version>
 	<name>cursomc</name>
 	<description>Curso udemy de java com spring</description>
 
