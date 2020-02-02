@@ -3,6 +3,7 @@ package com.pabloandrade.cursomc.services;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.pabloandrade.cursomc.security.UserSS;
+import com.pabloandrade.cursomc.services.exceptions.AuthorizationException;
 
 public class UserService {
 	
@@ -10,7 +11,7 @@ public class UserService {
 		try {
 		return (UserSS) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 		} catch (Exception e) {
-			return null;
+			throw new AuthorizationException("Acesso negado!");
 		}
 	}
 
